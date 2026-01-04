@@ -54,18 +54,6 @@ export default function Header() {
     setLanguage(language === 'id' ? 'en' : 'id');
   };
 
-  const handleLogout = async () => {
-    // 1. Close menu immediately to prevent double clicks
-    setMobileMenuOpen(false);
-    
-    // 2. Perform sign out
-    await signOut();
-    
-    // 3. HARD REDIRECT to Landing Page ('/')
-    // Ensures clean state and history
-    window.location.replace('/');
-  };
-
   const navItems: NavItem[] = [
     { label: t.nav.home, path: '/', icon: Home },
     { label: t.nav.services, path: '/#services', icon: Briefcase },
@@ -246,40 +234,25 @@ export default function Header() {
                   ))}
                 </div>
 
-                <div className="bg-slate-50 dark:bg-slate-950/50 p-4 border-t border-slate-100 dark:border-slate-800">
-                  {session ? (
-                    <div className="flex flex-col gap-3">
-                      <Link
-                        to="/admin"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-between w-full p-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-transform"
-                      >
-                        <div className="flex items-center gap-3">
-                          <LayoutDashboard className="h-5 w-5" />
-                          <span>{t.nav.dashboard}</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 opacity-50" />
-                      </Link>
-                      
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center justify-center gap-x-2 w-full py-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/20 rounded-2xl font-bold active:scale-95 transition-transform"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        {t.nav.logout}
-                      </button>
-                    </div>
-                  ) : (
+                {/* 
+                  UPDATED: Only show Dashboard link if logged in.
+                  Removed Logout and Login buttons as requested.
+                */}
+                {session && (
+                  <div className="bg-slate-50 dark:bg-slate-950/50 p-4 border-t border-slate-100 dark:border-slate-800">
                     <Link
-                      to="/login"
+                      to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-center gap-x-2 w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold shadow-lg active:scale-95 transition-transform"
+                      className="flex items-center justify-between w-full p-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-transform"
                     >
-                      <LogIn className="h-4 w-4" />
-                      {t.nav.login}
+                      <div className="flex items-center gap-3">
+                        <LayoutDashboard className="h-5 w-5" />
+                        <span>{t.nav.dashboard}</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 opacity-50" />
                     </Link>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </>
