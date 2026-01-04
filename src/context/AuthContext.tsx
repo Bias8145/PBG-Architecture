@@ -1,45 +1,96 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
-interface AuthContextType {
+// 1. Strict Type Definitions
+interface AuthState {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  isAuthenticated: boolean;
+}
+
+interface AuthContextType extends AuthState {
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize state
+  const [state, setState] = useState<AuthState>({
+    session: null,
+    user: null,
+    loading: true,
+    isAuthenticated: false,
+  });
 
   useEffect(() => {
+    let mounted = true;
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (mounted) {
+          setState({
+            session,
+            user: session?.user ?? null,
+            loading: false,
+            isAuthenticated: !!session,
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setState(prev => ({ ...prev, loading: false }));
+        }
+      }
+    };
+
+    initSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+      if (mounted) {
+        setState({
+          session,
+          user: session?.user ?? null,
+          loading: false,
+          isAuthenticated: !!session,
+        });
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+  // 2. Synchronous Logout Logic & Cleanup
+  const signOut = useCallback(async () => {
+    // Immediate state update to prevent UI ghosting
+    setState({
+      session: null,
+      user: null,
+      loading: false,
+      isAuthenticated: false,
+    });
+
+    try {
+      // Clear Supabase session from local storage/cookies
+      await supabase.auth.signOut();
+      
+      // Optional: Clear any other app-specific storage if needed
+      // localStorage.removeItem('app-settings');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signOut }}>
+    <AuthContext.Provider value={{ ...state, signOut }}>
       {children}
     </AuthContext.Provider>
   );
