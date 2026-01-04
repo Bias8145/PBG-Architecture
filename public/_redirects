@@ -1,1 +1,5 @@
+# Ensure Google verification file is served directly
+/google8fb12ad626bc51a7.html /google8fb12ad626bc51a7.html 200
+
+# SPA Fallback for all other routes
 /* /index.html 200
