@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase, PortfolioItem } from '../lib/supabase';
-import { Plus, Trash2, Edit2, X, Save, Upload, Video, Layers, Search } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Save, Upload, Video, Layers, Search, Briefcase, Filter } from 'lucide-react';
 import { isVideo } from '../utils/mediaHelper';
 import ConfirmationModal from '../components/ConfirmationModal';
 import SEO from '../components/SEO';
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
       isOpen: true,
       type,
       mode: 'alert',
-      title: type === 'danger' ? 'Error' : type === 'success' ? 'Success' : 'Attention',
+      title: type === 'danger' ? 'Gagal' : type === 'success' ? 'Berhasil' : 'Perhatian',
       message,
       confirmText: 'OK',
       action: () => setModalState(prev => ({ ...prev, isOpen: false }))
@@ -250,33 +250,55 @@ export default function AdminDashboard() {
         isLoading={isUploading}
       />
 
-      {/* Dashboard Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{t.admin.dashboardTitle}</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage your portfolio projects</p>
+      {/* DASHBOARD HEADER REDESIGN */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">
+            <Briefcase className="h-8 w-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Kelola Proyek</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Tambah, edit, atau hapus portofolio desain Anda.</p>
+          </div>
         </div>
+        
         <button
           onClick={() => openModal()}
-          className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40"
+          className="w-full lg:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 transform hover:-translate-y-0.5 font-semibold"
         >
           <Plus className="h-5 w-5" />
           <span>{t.admin.addProject}</span>
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-6 relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-slate-400" />
+      {/* Search & Filter Bar */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-grow">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-slate-400" />
+          </div>
+          <input 
+            type="text" 
+            placeholder="Cari proyek berdasarkan judul atau kategori..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm"
+          />
         </div>
-        <input 
-          type="text" 
-          placeholder="Search projects..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-        />
+        <div className="sm:w-48 relative">
+           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Filter className="h-4 w-4 text-slate-400" />
+          </div>
+           <select 
+             className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer"
+             onChange={(e) => setSearchTerm(e.target.value)}
+           >
+             <option value="">Semua Kategori</option>
+             <option value="Architecture">Architecture</option>
+             <option value="Structure">Structure</option>
+             <option value="MEP">MEP</option>
+           </select>
+        </div>
       </div>
 
       {/* Projects Table */}
@@ -285,68 +307,80 @@ export default function AdminDashboard() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-                <th className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300">Media</th>
-                <th className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300">{t.admin.projectTitle}</th>
-                <th className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300">{t.admin.category}</th>
-                <th className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300 text-right">{t.admin.actions}</th>
+                <th className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wider">Media</th>
+                <th className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wider">{t.admin.projectTitle}</th>
+                <th className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wider">{t.admin.category}</th>
+                <th className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-300 text-sm uppercase tracking-wider text-right">{t.admin.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {loading ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
-                    <div className="flex justify-center">
+                    <div className="flex justify-center flex-col items-center gap-3">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <span className="text-sm">Memuat data...</span>
                     </div>
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
-                    No projects found.
+                  <td colSpan={4} className="px-6 py-16 text-center text-slate-500 dark:text-slate-400">
+                    <div className="flex flex-col items-center gap-3">
+                       <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-full">
+                          <Layers className="h-8 w-8 text-slate-400" />
+                       </div>
+                       <p className="font-medium">Belum ada proyek yang ditemukan.</p>
+                       <button onClick={() => openModal()} className="text-blue-600 hover:underline text-sm">Tambah Proyek Baru</button>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                  <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
                     <td className="px-6 py-4">
-                      <div className="relative inline-block">
+                      <div className="relative inline-block shadow-sm">
                         {isVideo(item.image_url) ? (
-                          <div className="h-12 w-16 bg-black rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center">
+                          <div className="h-14 w-20 bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center overflow-hidden">
                             <Video className="h-6 w-6 text-white" />
                           </div>
                         ) : (
-                          <img src={item.image_url} alt={item.title} className="h-12 w-16 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
+                          <img src={item.image_url} alt={item.title} className="h-14 w-20 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
                         )}
                         {item.gallery && item.gallery.length > 1 && (
-                          <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white dark:border-slate-800 flex items-center shadow-sm">
+                          <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white dark:border-slate-800 flex items-center shadow-sm z-10">
                             <Layers className="h-3 w-3 mr-0.5" />
                             {item.gallery.length}
                           </div>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">{item.title}</td>
+                    <td className="px-6 py-4">
+                       <div className="font-bold text-slate-800 dark:text-slate-200">{item.title}</div>
+                       <div className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[200px]">{item.description}</div>
+                    </td>
                     <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                      <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-semibold border border-blue-100 dark:border-blue-800">
+                      <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-bold border border-slate-200 dark:border-slate-700">
                         {item.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      <button
-                        onClick={() => openModal(item)}
-                        className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
-                        title="Edit"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(item)}
-                        className="text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openModal(item)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(item)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Hapus
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -370,7 +404,6 @@ export default function AdminDashboard() {
             </div>
             
             <form onSubmit={handleSaveClick} className="p-6 space-y-6 overflow-y-auto">
-              {/* Form content same as before, just ensuring styling consistency */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.admin.projectTitle}</label>
@@ -379,7 +412,7 @@ export default function AdminDashboard() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                    placeholder="e.g. Modern Villa Design"
+                    placeholder="Contoh: Desain Villa Modern"
                   />
                 </div>
                 
@@ -418,7 +451,7 @@ export default function AdminDashboard() {
                       <Upload className="h-6 w-6 text-blue-500" />
                     </div>
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.admin.dropzone}</span>
-                    <span className="text-xs text-slate-500 mt-1">Supports JPG, PNG, MP4</span>
+                    <span className="text-xs text-slate-500 mt-1">Mendukung JPG, PNG, MP4</span>
                   </label>
                 </div>
 
@@ -468,7 +501,7 @@ export default function AdminDashboard() {
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-                  placeholder="Describe the project details..."
+                  placeholder="Jelaskan detail proyek..."
                 />
               </div>
 

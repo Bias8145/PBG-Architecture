@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   Briefcase, 
@@ -13,7 +13,8 @@ import {
   Moon, 
   Building2,
   Menu,
-  X
+  X,
+  ChevronRight
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -21,7 +22,6 @@ import { useTheme } from '../context/ThemeContext';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Define the Navigation Interface
 interface NavItem {
   label: string;
   path: string;
@@ -35,8 +35,8 @@ export default function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Handle scroll effect for glassmorphism intensity
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -45,24 +45,30 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const toggleLanguage = () => {
     setLanguage(language === 'id' ? 'en' : 'id');
   };
 
-  // Navigation Data
+  const handleLogout = async () => {
+    // 1. Close menu immediately to prevent double clicks
+    setMobileMenuOpen(false);
+    // 2. Perform sign out
+    await signOut();
+    // 3. Redirect is handled by AuthContext/ProtectedRoutes, but we can force it here too
+    navigate('/login');
+  };
+
   const navItems: NavItem[] = [
     { label: t.nav.home, path: '/', icon: Home },
     { label: t.nav.services, path: '/#services', icon: Briefcase },
     { label: t.nav.portfolio, path: '/#portfolio', icon: FolderOpen },
     { label: t.nav.contact, path: '/#contact', icon: Phone },
   ];
-
-  // Helper to check if link is active
-  const isActive = (path: string) => {
-    if (path === '/' && location.pathname === '/') return true;
-    if (path.startsWith('/#')) return location.hash === path.substring(1);
-    return false;
-  };
 
   return (
     <>
@@ -76,62 +82,68 @@ export default function Header() {
           className={clsx(
             "mx-auto max-w-7xl rounded-full transition-all duration-500 border",
             scrolled 
-              ? "bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-lg border-slate-200/50 dark:border-slate-700/50 p-2 pl-4 pr-2" 
+              ? "bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border-slate-200/50 dark:border-slate-700/50 p-2 pl-4 pr-2" 
               : "bg-transparent border-transparent p-2"
           )}
         >
           <div className="flex items-center justify-between">
-            {/* Logo Section */}
+            {/* BRANDING REDESIGN: More Professional Look */}
             <Link 
               to="/" 
               className="flex items-center gap-x-3 group"
               aria-label="Homepage"
             >
               <div className={clsx(
-                "p-2 rounded-xl transition-all duration-300 transform group-hover:rotate-12 group-hover:scale-105 shadow-md",
-                scrolled ? "bg-blue-600 text-white" : "bg-white/10 backdrop-blur-sm text-white border border-white/20"
+                "p-2.5 rounded-xl transition-all duration-300 transform group-hover:rotate-6 shadow-lg",
+                scrolled 
+                  ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white" 
+                  : "bg-white/10 backdrop-blur-md text-white border border-white/20"
               )}>
                 <Building2 className="h-5 w-5" />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col justify-center">
                 <span className={clsx(
-                  "text-lg font-bold tracking-tight leading-none transition-colors font-sans",
+                  "text-xl font-extrabold tracking-tight leading-none font-sans",
                   scrolled ? "text-slate-900 dark:text-white" : "text-white"
                 )}>
                   PBG
                 </span>
                 <span className={clsx(
-                  "text-[10px] uppercase tracking-[0.2em] font-semibold",
-                  scrolled ? "text-blue-600 dark:text-blue-400" : "text-blue-200"
+                  "text-[9px] uppercase tracking-[0.25em] font-medium mt-0.5",
+                  scrolled ? "text-slate-500 dark:text-slate-400" : "text-blue-100/80"
                 )}>
-                  Design
+                  Architecture
                 </span>
               </div>
             </Link>
 
-            {/* Desktop Navigation (Center) */}
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-x-1">
               {navItems.map((item) => (
                 <a
                   key={item.label}
                   href={item.path}
                   className={clsx(
-                    "flex items-center gap-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ease-in-out group",
+                    "flex items-center gap-x-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ease-in-out group relative overflow-hidden",
                     scrolled 
-                      ? "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400" 
-                      : "text-slate-200 hover:text-white hover:bg-white/10"
+                      ? "text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400" 
+                      : "text-slate-200 hover:text-white"
                   )}
-                  aria-label={item.label}
                 >
-                  <item.icon className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
-                  <span>{item.label}</span>
+                  {/* Hover Background Effect */}
+                  <span className={clsx(
+                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
+                    scrolled ? "bg-slate-100 dark:bg-slate-800" : "bg-white/10"
+                  )} />
+                  
+                  <item.icon className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:scale-110" />
+                  <span className="relative z-10">{item.label}</span>
                 </a>
               ))}
             </nav>
 
-            {/* Right Actions (Theme, Lang, Auth) */}
+            {/* Right Actions */}
             <div className="flex items-center gap-x-2">
-              {/* Theme Toggle */}
               <button
                 onClick={toggleTheme}
                 className={clsx(
@@ -140,12 +152,10 @@ export default function Header() {
                     ? "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800" 
                     : "text-white hover:bg-white/10"
                 )}
-                aria-label="Toggle Theme"
               >
                 {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
 
-              {/* Language Toggle */}
               <button
                 onClick={toggleLanguage}
                 className={clsx(
@@ -154,13 +164,11 @@ export default function Header() {
                     ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700"
                     : "bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm"
                 )}
-                aria-label="Switch Language"
               >
                 <Globe className="h-3 w-3" />
                 <span>{language.toUpperCase()}</span>
               </button>
 
-              {/* Auth Button */}
               {session ? (
                 <Link
                   to="/admin"
@@ -188,80 +196,96 @@ export default function Header() {
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className={clsx(
-                  "md:hidden p-2.5 rounded-full transition-all duration-300",
-                  scrolled ? "text-slate-800 dark:text-white" : "text-white"
+                  "md:hidden p-2.5 rounded-full transition-all duration-300 active:scale-90",
+                  scrolled ? "text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-800" : "text-white bg-white/10"
                 )}
                 aria-label="Toggle Menu"
               >
-                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Navigation Drawer (Fluid Overlay) */}
+      {/* Mobile Navigation Drawer - Z-INDEX FIX: Raised to z-[100] */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-x-4 top-24 z-40 md:hidden"
-          >
-            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 p-4 overflow-hidden">
-              <div className="grid grid-cols-4 gap-2 mb-4">
-                {navItems.map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex flex-col items-center justify-center gap-y-2 p-3 rounded-2xl hover:bg-blue-50 dark:hover:bg-blue-900/20 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300"
-                  >
-                    <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full">
-                      <item.icon className="h-5 w-5" />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-wide">{item.label}</span>
-                  </a>
-                ))}
-              </div>
-
-              <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
-                {session ? (
-                  <div className="flex flex-col gap-2">
-                    <Link
-                      to="/admin"
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileMenuOpen(false)}
+              className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[90] md:hidden"
+            />
+            
+            {/* Drawer */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              transition={{ type: "spring", duration: 0.4, bounce: 0.3 }}
+              className="fixed inset-x-4 top-24 z-[100] md:hidden"
+            >
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                {/* Menu Grid */}
+                <div className="p-4 grid grid-cols-4 gap-3">
+                  {navItems.map((item) => (
+                    <a
+                      key={item.label}
+                      href={item.path}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center justify-center gap-x-2 w-full py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-transform"
+                      className="flex flex-col items-center justify-center gap-y-2 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200 active:scale-95"
                     >
-                      <LayoutDashboard className="h-4 w-4" />
-                      {t.nav.dashboard}
+                      <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl shadow-sm">
+                        <item.icon className="h-5 w-5" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-center leading-tight">{item.label}</span>
+                    </a>
+                  ))}
+                </div>
+
+                {/* Auth Actions Area */}
+                <div className="bg-slate-50 dark:bg-slate-950/50 p-4 border-t border-slate-100 dark:border-slate-800">
+                  {session ? (
+                    <div className="flex flex-col gap-3">
+                      <Link
+                        to="/admin"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-between w-full p-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-transform"
+                      >
+                        <div className="flex items-center gap-3">
+                          <LayoutDashboard className="h-5 w-5" />
+                          <span>{t.nav.dashboard}</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 opacity-50" />
+                      </Link>
+                      
+                      {/* LOGOUT FIX: Ensure button is clearly clickable and handles event properly */}
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center justify-center gap-x-2 w-full py-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/20 rounded-2xl font-bold active:scale-95 transition-transform"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {t.nav.logout}
+                      </button>
+                    </div>
+                  ) : (
+                    <Link
+                      to="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-center gap-x-2 w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold shadow-lg active:scale-95 transition-transform"
+                    >
+                      <LogIn className="h-4 w-4" />
+                      {t.nav.login}
                     </Link>
-                    <button
-                      onClick={() => {
-                        signOut();
-                        setMobileMenuOpen(false);
-                      }}
-                      className="flex items-center justify-center gap-x-2 w-full py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl font-bold active:scale-95 transition-transform"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      {t.nav.logout}
-                    </button>
-                  </div>
-                ) : (
-                  <Link
-                    to="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-x-2 w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white rounded-2xl font-bold active:scale-95 transition-transform"
-                  >
-                    <LogIn className="h-4 w-4" />
-                    {t.nav.login}
-                  </Link>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>
