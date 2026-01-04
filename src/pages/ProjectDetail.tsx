@@ -5,6 +5,7 @@ import { ArrowLeft, Calendar, Tag, Share2, ZoomIn, Download, X, ChevronLeft, Che
 import { supabase, PortfolioItem } from '../lib/supabase';
 import { isVideo } from '../utils/mediaHelper';
 import { useLanguage } from '../context/LanguageContext';
+import SEO from '../components/SEO';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -86,6 +87,13 @@ export default function ProjectDetail() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 pt-24 pb-12 transition-colors duration-300">
+      <SEO 
+        title={project.title} 
+        description={project.description}
+        image={project.image_url}
+        type="article"
+      />
+
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top Navigation Bar */}
         <div className="flex justify-between items-center mb-8 sticky top-20 z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md py-4 -mx-4 px-4 border-b border-slate-100 dark:border-slate-800">

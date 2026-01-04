@@ -5,6 +5,7 @@ import { Ruler, Home as HomeIcon, Zap, ArrowRight, Play, Info, ExternalLink } fr
 import { useLanguage } from '../context/LanguageContext';
 import { supabase, PortfolioItem } from '../lib/supabase';
 import { isVideo } from '../utils/mediaHelper';
+import SEO from '../components/SEO';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -63,6 +64,11 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-slate-950 transition-colors duration-300">
+      <SEO 
+        title={t.nav.home} 
+        description={t.hero.subheadline} 
+      />
+      
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-900">
         {/* Background Image with Overlay */}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { Building2 } from 'lucide-react';
+import SEO from '../components/SEO';
 
 export default function Login() {
   const { t } = useLanguage();
@@ -43,6 +44,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center px-4 transition-colors duration-300">
+      <SEO title={isSignUp ? 'Register' : t.admin.loginTitle} />
       <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-xl w-full max-w-md border border-slate-200 dark:border-slate-700">
         <div className="flex justify-center mb-6">
           <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-full">
