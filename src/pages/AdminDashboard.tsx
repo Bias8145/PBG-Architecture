@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase, PortfolioItem } from '../lib/supabase';
-import { Plus, Trash2, Edit2, X, Save, Upload, Link as LinkIcon, Image as ImageIcon, Video, Layers } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Save, Upload, Video, Layers, Search } from 'lucide-react';
 import { isVideo } from '../utils/mediaHelper';
 import ConfirmationModal from '../components/ConfirmationModal';
+import SEO from '../components/SEO';
 
 export default function AdminDashboard() {
   const { t } = useLanguage();
@@ -11,6 +12,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Form State
   const [title, setTitle] = useState('');
@@ -78,7 +80,6 @@ export default function AdminDashboard() {
     return data.publicUrl;
   };
 
-  // Helper to show alerts using the custom modal
   const showAlert = (message: string, type: 'warning' | 'danger' | 'success' = 'warning') => {
     setModalState({
       isOpen: true,
@@ -91,11 +92,9 @@ export default function AdminDashboard() {
     });
   };
 
-  // 1. Triggered when user clicks "Save" in the form
   const handleSaveClick = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation with Custom Modal - THIS IS WHERE THE POPUP APPEARS
     if (!title || !description) {
       showAlert("Mohon lengkapi Judul dan Deskripsi proyek.", 'warning');
       return;
@@ -105,7 +104,6 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Open Confirmation Modal
     setModalState({
       isOpen: true,
       type: 'info',
@@ -119,19 +117,16 @@ export default function AdminDashboard() {
     });
   };
 
-  // 2. The actual save logic
   const performSave = async () => {
     setIsUploading(true);
 
     try {
-      // 1. Upload new files
       const uploadedUrls: string[] = [];
       for (const file of newFiles) {
         const url = await handleFileUpload(file);
         uploadedUrls.push(url);
       }
 
-      // 2. Combine existing URLs with new uploaded URLs
       const finalGallery = [...galleryUrls, ...uploadedUrls];
       const mainImageUrl = finalGallery[0];
 
@@ -160,9 +155,6 @@ export default function AdminDashboard() {
       fetchItems();
       setModalState(prev => ({ ...prev, isOpen: false }));
       
-      // Optional: Show success message
-      // setTimeout(() => showAlert("Project saved successfully!", 'success'), 300);
-      
     } catch (error) {
       console.error('Error saving item:', error);
       setModalState(prev => ({ ...prev, isOpen: false }));
@@ -172,7 +164,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // 3. Triggered when user clicks "Delete" icon
   const handleDeleteClick = (item: PortfolioItem) => {
     setModalState({
       isOpen: true,
@@ -185,7 +176,6 @@ export default function AdminDashboard() {
     });
   };
 
-  // 4. The actual delete logic
   const performDelete = async (id: string) => {
     setIsUploading(true);
     try {
@@ -237,8 +227,14 @@ export default function AdminDashboard() {
     setNewFiles(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
+  const filteredItems = items.filter(item => 
+    item.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    item.category.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="container mx-auto px-4 py-8 bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-300">
+    <div className="w-full">
+      <SEO title="Admin Dashboard" />
       
       {/* Global Confirmation/Alert Modal */}
       <ConfirmationModal 
@@ -254,18 +250,37 @@ export default function AdminDashboard() {
         isLoading={isUploading}
       />
 
-      <div className="flex justify-between items-center mb-8 pt-20">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{t.admin.dashboardTitle}</h1>
+      {/* Dashboard Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{t.admin.dashboardTitle}</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage your portfolio projects</p>
+        </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+          className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40"
         >
           <Plus className="h-5 w-5" />
           <span>{t.admin.addProject}</span>
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+      {/* Search Bar */}
+      <div className="mb-6 relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="h-5 w-5 text-slate-400" />
+        </div>
+        <input 
+          type="text" 
+          placeholder="Search projects..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+        />
+      </div>
+
+      {/* Projects Table */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -277,47 +292,65 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {items.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="relative inline-block">
-                      {isVideo(item.image_url) ? (
-                        <div className="h-12 w-16 bg-black rounded border border-slate-200 dark:border-slate-600 flex items-center justify-center">
-                          <Video className="h-6 w-6 text-white" />
-                        </div>
-                      ) : (
-                        <img src={item.image_url} alt={item.title} className="h-12 w-16 object-cover rounded border border-slate-200 dark:border-slate-600" />
-                      )}
-                      {item.gallery && item.gallery.length > 1 && (
-                        <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white dark:border-slate-800 flex items-center">
-                          <Layers className="h-3 w-3 mr-0.5" />
-                          {item.gallery.length}
-                        </div>
-                      )}
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
+                    <div className="flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">{item.title}</td>
-                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                    <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-semibold border border-blue-100 dark:border-blue-800">
-                      {item.category}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button
-                      onClick={() => openModal(item)}
-                      className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-1 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
-                    >
-                      <Edit2 className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(item)}
-                      className="text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
+                </tr>
+              ) : filteredItems.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+                    No projects found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredItems.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="relative inline-block">
+                        {isVideo(item.image_url) ? (
+                          <div className="h-12 w-16 bg-black rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center">
+                            <Video className="h-6 w-6 text-white" />
+                          </div>
+                        ) : (
+                          <img src={item.image_url} alt={item.title} className="h-12 w-16 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
+                        )}
+                        {item.gallery && item.gallery.length > 1 && (
+                          <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white dark:border-slate-800 flex items-center shadow-sm">
+                            <Layers className="h-3 w-3 mr-0.5" />
+                            {item.gallery.length}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">{item.title}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                      <span className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-semibold border border-blue-100 dark:border-blue-800">
+                        {item.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button
+                        onClick={() => openModal(item)}
+                        className="text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
+                        title="Edit"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(item)}
+                        className="text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -325,18 +358,19 @@ export default function AdminDashboard() {
 
       {/* Main Edit/Create Form Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 ring-1 ring-white/10">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 ring-1 ring-white/10 animate-fade-in">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
                 {editingItem ? t.admin.editProject : t.admin.addProject}
               </h3>
-              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-                <X className="h-6 w-6" />
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700">
+                <X className="h-5 w-5" />
               </button>
             </div>
             
             <form onSubmit={handleSaveClick} className="p-6 space-y-6 overflow-y-auto">
+              {/* Form content same as before, just ensuring styling consistency */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.admin.projectTitle}</label>
@@ -366,12 +400,11 @@ export default function AdminDashboard() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t.admin.gallery}</label>
                 
-                {/* File Dropzone */}
                 <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all bg-slate-50 dark:bg-slate-900/50 mb-4 cursor-pointer group">
                   <input
                     type="file"
                     accept="image/*,video/*"
-                    multiple // Enable multiple files
+                    multiple
                     onChange={(e) => {
                       if (e.target.files) {
                         setNewFiles(prev => [...prev, ...Array.from(e.target.files!)]);
@@ -389,9 +422,7 @@ export default function AdminDashboard() {
                   </label>
                 </div>
 
-                {/* Preview Grid */}
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                  {/* Existing Gallery Items */}
                   {galleryUrls.map((url, idx) => (
                     <div key={`existing-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
                       {isVideo(url) ? (
@@ -406,13 +437,9 @@ export default function AdminDashboard() {
                       >
                         <X className="h-3 w-3" />
                       </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity text-center">
-                        Existing
-                      </div>
                     </div>
                   ))}
 
-                  {/* New Files to Upload */}
                   {newFiles.map((file, idx) => (
                     <div key={`new-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden border-2 border-blue-500/50 dark:border-blue-500/50 shadow-sm">
                       {file.type.startsWith('video/') ? (
@@ -429,9 +456,6 @@ export default function AdminDashboard() {
                       >
                         <X className="h-3 w-3" />
                       </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-blue-600 text-white text-[10px] px-2 py-1 text-center font-medium">
-                        New Upload
-                      </div>
                     </div>
                   ))}
                 </div>
