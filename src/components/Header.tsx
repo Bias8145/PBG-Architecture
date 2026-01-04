@@ -106,16 +106,16 @@ export default function Header() {
               </div>
               <div className="flex flex-col justify-center">
                 <span className={clsx(
-                  "text-xl font-extrabold tracking-tight leading-none font-sans",
+                  "text-lg sm:text-xl font-extrabold tracking-tight leading-none font-sans",
                   scrolled ? "text-slate-900 dark:text-white" : "text-white"
                 )}>
-                  PBG
+                  PBG DESIGN
                 </span>
                 <span className={clsx(
-                  "text-[9px] uppercase tracking-[0.25em] font-medium mt-0.5",
+                  "text-[8px] sm:text-[9px] uppercase tracking-widest font-medium mt-0.5",
                   scrolled ? "text-slate-500 dark:text-slate-400" : "text-blue-100/80"
                 )}>
-                  Architecture
+                  ARCH • STRUCTURE • MEP
                 </span>
               </div>
             </Link>
