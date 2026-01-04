@@ -22,21 +22,22 @@ export default function AdminDashboard() {
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Confirmation State
-  const [confirmState, setConfirmState] = useState<{
+  // Unified Modal State
+  const [modalState, setModalState] = useState<{
     isOpen: boolean;
-    type: 'danger' | 'info';
+    type: 'danger' | 'info' | 'success' | 'warning';
+    mode: 'confirm' | 'alert';
     title: string;
     message: string;
     confirmText: string;
-    action: () => Promise<void>;
+    action?: () => Promise<void> | void;
   }>({
     isOpen: false,
     type: 'info',
+    mode: 'confirm',
     title: '',
     message: '',
-    confirmText: '',
-    action: async () => {},
+    confirmText: 'OK',
   });
 
   useEffect(() => {
@@ -77,36 +78,50 @@ export default function AdminDashboard() {
     return data.publicUrl;
   };
 
+  // Helper to show alerts using the custom modal
+  const showAlert = (message: string, type: 'warning' | 'danger' | 'success' = 'warning') => {
+    setModalState({
+      isOpen: true,
+      type,
+      mode: 'alert',
+      title: type === 'danger' ? 'Error' : type === 'success' ? 'Success' : 'Attention',
+      message,
+      confirmText: 'OK',
+      action: () => setModalState(prev => ({ ...prev, isOpen: false }))
+    });
+  };
+
   // 1. Triggered when user clicks "Save" in the form
   const handleSaveClick = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
+    // Validation with Custom Modal - THIS IS WHERE THE POPUP APPEARS
     if (!title || !description) {
-      alert("Please fill in all required fields");
+      showAlert("Mohon lengkapi Judul dan Deskripsi proyek.", 'warning');
       return;
     }
     if (galleryUrls.length === 0 && newFiles.length === 0) {
-      alert("Please add at least one image or video.");
+      showAlert("Mohon unggah minimal satu foto atau video untuk proyek ini.", 'warning');
       return;
     }
 
     // Open Confirmation Modal
-    setConfirmState({
+    setModalState({
       isOpen: true,
       type: 'info',
-      title: editingItem ? 'Update Project?' : 'Create New Project?',
+      mode: 'confirm',
+      title: editingItem ? 'Update Proyek?' : 'Publikasikan Proyek?',
       message: editingItem 
-        ? `Are you sure you want to update "${title}"? Changes will be live immediately.`
-        : `Are you sure you want to publish "${title}" to your portfolio?`,
-      confirmText: editingItem ? 'Update' : 'Publish',
-      action: performSave // The actual save logic
+        ? `Apakah Anda yakin ingin memperbarui "${title}"? Perubahan akan langsung terlihat.`
+        : `Apakah Anda yakin ingin mempublikasikan "${title}" ke portofolio?`,
+      confirmText: editingItem ? 'Update' : 'Publikasikan',
+      action: performSave
     });
   };
 
-  // 2. The actual save logic (executed after confirmation)
+  // 2. The actual save logic
   const performSave = async () => {
-    setIsUploading(true); // Show loading in modal
+    setIsUploading(true);
 
     try {
       // 1. Upload new files
@@ -118,14 +133,12 @@ export default function AdminDashboard() {
 
       // 2. Combine existing URLs with new uploaded URLs
       const finalGallery = [...galleryUrls, ...uploadedUrls];
-      
-      // The first image in the gallery becomes the main thumbnail
       const mainImageUrl = finalGallery[0];
 
       const payload = {
         title,
         description,
-        image_url: mainImageUrl, // Backward compatibility & Thumbnail
+        image_url: mainImageUrl,
         gallery: finalGallery,
         category,
       };
@@ -145,10 +158,15 @@ export default function AdminDashboard() {
 
       closeModal();
       fetchItems();
-      setConfirmState(prev => ({ ...prev, isOpen: false })); // Close confirmation
+      setModalState(prev => ({ ...prev, isOpen: false }));
+      
+      // Optional: Show success message
+      // setTimeout(() => showAlert("Project saved successfully!", 'success'), 300);
+      
     } catch (error) {
       console.error('Error saving item:', error);
-      alert('Failed to save item. Please try again.');
+      setModalState(prev => ({ ...prev, isOpen: false }));
+      setTimeout(() => showAlert('Gagal menyimpan proyek. Silakan coba lagi.', 'danger'), 300);
     } finally {
       setIsUploading(false);
     }
@@ -156,19 +174,20 @@ export default function AdminDashboard() {
 
   // 3. Triggered when user clicks "Delete" icon
   const handleDeleteClick = (item: PortfolioItem) => {
-    setConfirmState({
+    setModalState({
       isOpen: true,
       type: 'danger',
-      title: 'Delete Project?',
-      message: `Are you sure you want to permanently delete "${item.title}"? This action cannot be undone.`,
-      confirmText: 'Delete',
+      mode: 'confirm',
+      title: 'Hapus Proyek?',
+      message: `Apakah Anda yakin ingin menghapus permanen "${item.title}"? Tindakan ini tidak dapat dibatalkan.`,
+      confirmText: 'Hapus',
       action: async () => await performDelete(item.id)
     });
   };
 
   // 4. The actual delete logic
   const performDelete = async (id: string) => {
-    setIsUploading(true); // Reuse uploading state for loading indicator
+    setIsUploading(true);
     try {
       const { error } = await supabase
         .from('portfolio')
@@ -177,10 +196,11 @@ export default function AdminDashboard() {
       
       if (error) throw error;
       fetchItems();
-      setConfirmState(prev => ({ ...prev, isOpen: false }));
+      setModalState(prev => ({ ...prev, isOpen: false }));
     } catch (error) {
       console.error('Error deleting item:', error);
-      alert('Failed to delete item.');
+      setModalState(prev => ({ ...prev, isOpen: false }));
+      setTimeout(() => showAlert('Gagal menghapus item.', 'danger'), 300);
     } finally {
       setIsUploading(false);
     }
@@ -220,15 +240,16 @@ export default function AdminDashboard() {
   return (
     <div className="container mx-auto px-4 py-8 bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-300">
       
-      {/* Confirmation Modal Component */}
+      {/* Global Confirmation/Alert Modal */}
       <ConfirmationModal 
-        isOpen={confirmState.isOpen}
-        onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
-        onConfirm={confirmState.action}
-        title={confirmState.title}
-        message={confirmState.message}
-        type={confirmState.type}
-        confirmText={confirmState.confirmText}
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={modalState.action}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+        mode={modalState.mode}
+        confirmText={modalState.confirmText}
         cancelText={t.admin.cancel}
         isLoading={isUploading}
       />
@@ -302,10 +323,10 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Main Edit/Create Modal */}
+      {/* Main Edit/Create Form Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700 ring-1 ring-white/10">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white">
                 {editingItem ? t.admin.editProject : t.admin.addProject}
@@ -323,8 +344,8 @@ export default function AdminDashboard() {
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    placeholder="e.g. Modern Villa Design"
                   />
                 </div>
                 
@@ -333,7 +354,7 @@ export default function AdminDashboard() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white transition-all"
                   >
                     <option value="Architecture">Architecture</option>
                     <option value="Structure">Structure</option>
@@ -346,7 +367,7 @@ export default function AdminDashboard() {
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t.admin.gallery}</label>
                 
                 {/* File Dropzone */}
-                <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 text-center hover:border-blue-400 transition-colors bg-slate-50 dark:bg-slate-900/50 mb-4">
+                <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all bg-slate-50 dark:bg-slate-900/50 mb-4 cursor-pointer group">
                   <input
                     type="file"
                     accept="image/*,video/*"
@@ -359,9 +380,12 @@ export default function AdminDashboard() {
                     className="hidden"
                     id="gallery-upload"
                   />
-                  <label htmlFor="gallery-upload" className="cursor-pointer flex flex-col items-center">
-                    <Upload className="h-8 w-8 text-slate-400 dark:text-slate-500 mb-2" />
-                    <span className="text-sm text-slate-500 dark:text-slate-400">{t.admin.dropzone}</span>
+                  <label htmlFor="gallery-upload" className="cursor-pointer flex flex-col items-center w-full h-full">
+                    <div className="p-3 bg-white dark:bg-slate-800 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                      <Upload className="h-6 w-6 text-blue-500" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.admin.dropzone}</span>
+                    <span className="text-xs text-slate-500 mt-1">Supports JPG, PNG, MP4</span>
                   </label>
                 </div>
 
@@ -369,7 +393,7 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                   {/* Existing Gallery Items */}
                   {galleryUrls.map((url, idx) => (
-                    <div key={`existing-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
+                    <div key={`existing-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
                       {isVideo(url) ? (
                         <video src={url} className="w-full h-full object-cover" />
                       ) : (
@@ -378,11 +402,11 @@ export default function AdminDashboard() {
                       <button
                         type="button"
                         onClick={() => removeGalleryItem(idx)}
-                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
                       >
                         <X className="h-3 w-3" />
                       </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity text-center">
                         Existing
                       </div>
                     </div>
@@ -390,9 +414,9 @@ export default function AdminDashboard() {
 
                   {/* New Files to Upload */}
                   {newFiles.map((file, idx) => (
-                    <div key={`new-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden border border-blue-400 dark:border-blue-600">
+                    <div key={`new-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden border-2 border-blue-500/50 dark:border-blue-500/50 shadow-sm">
                       {file.type.startsWith('video/') ? (
-                        <div className="w-full h-full bg-black flex items-center justify-center">
+                        <div className="w-full h-full bg-slate-900 flex items-center justify-center">
                           <Video className="h-8 w-8 text-white" />
                         </div>
                       ) : (
@@ -401,12 +425,12 @@ export default function AdminDashboard() {
                       <button
                         type="button"
                         onClick={() => removeNewFile(idx)}
-                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all transform hover:scale-110"
                       >
                         <X className="h-3 w-3" />
                       </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-blue-600 text-white text-[10px] px-2 py-1">
-                        New
+                      <div className="absolute bottom-0 left-0 right-0 bg-blue-600 text-white text-[10px] px-2 py-1 text-center font-medium">
+                        New Upload
                       </div>
                     </div>
                   ))}
@@ -418,8 +442,9 @@ export default function AdminDashboard() {
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  rows={4}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  placeholder="Describe the project details..."
                 />
               </div>
 
@@ -427,13 +452,13 @@ export default function AdminDashboard() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                  className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
                 >
                   {t.admin.cancel}
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2 shadow-sm"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all flex items-center space-x-2 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transform active:scale-95"
                 >
                   <Save className="h-4 w-4" />
                   <span>{t.admin.save}</span>
