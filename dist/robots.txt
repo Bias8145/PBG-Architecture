@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://pbg-architecture.pages.dev/sitemap.xml

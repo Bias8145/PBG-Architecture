@@ -3,6 +3,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { supabase, PortfolioItem } from '../lib/supabase';
 import { Plus, Trash2, Edit2, X, Save, Upload, Link as LinkIcon, Image as ImageIcon, Video, Layers } from 'lucide-react';
 import { isVideo } from '../utils/mediaHelper';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 export default function AdminDashboard() {
   const { t } = useLanguage();
@@ -20,6 +21,23 @@ export default function AdminDashboard() {
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Confirmation State
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    type: 'danger' | 'info';
+    title: string;
+    message: string;
+    confirmText: string;
+    action: () => Promise<void>;
+  }>({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    confirmText: '',
+    action: async () => {},
+  });
 
   useEffect(() => {
     fetchItems();
@@ -59,10 +77,36 @@ export default function AdminDashboard() {
     return data.publicUrl;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // 1. Triggered when user clicks "Save" in the form
+  const handleSaveClick = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setIsUploading(true);
+    
+    // Basic validation
+    if (!title || !description) {
+      alert("Please fill in all required fields");
+      return;
+    }
+    if (galleryUrls.length === 0 && newFiles.length === 0) {
+      alert("Please add at least one image or video.");
+      return;
+    }
+
+    // Open Confirmation Modal
+    setConfirmState({
+      isOpen: true,
+      type: 'info',
+      title: editingItem ? 'Update Project?' : 'Create New Project?',
+      message: editingItem 
+        ? `Are you sure you want to update "${title}"? Changes will be live immediately.`
+        : `Are you sure you want to publish "${title}" to your portfolio?`,
+      confirmText: editingItem ? 'Update' : 'Publish',
+      action: performSave // The actual save logic
+    });
+  };
+
+  // 2. The actual save logic (executed after confirmation)
+  const performSave = async () => {
+    setIsUploading(true); // Show loading in modal
 
     try {
       // 1. Upload new files
@@ -75,12 +119,7 @@ export default function AdminDashboard() {
       // 2. Combine existing URLs with new uploaded URLs
       const finalGallery = [...galleryUrls, ...uploadedUrls];
       
-      // Ensure we have at least one image
-      if (finalGallery.length === 0) {
-        throw new Error("Please add at least one image or video.");
-      }
-
-      // 3. The first image in the gallery becomes the main thumbnail
+      // The first image in the gallery becomes the main thumbnail
       const mainImageUrl = finalGallery[0];
 
       const payload = {
@@ -106,18 +145,30 @@ export default function AdminDashboard() {
 
       closeModal();
       fetchItems();
+      setConfirmState(prev => ({ ...prev, isOpen: false })); // Close confirmation
     } catch (error) {
       console.error('Error saving item:', error);
       alert('Failed to save item. Please try again.');
     } finally {
-      setLoading(false);
       setIsUploading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this project?')) return;
+  // 3. Triggered when user clicks "Delete" icon
+  const handleDeleteClick = (item: PortfolioItem) => {
+    setConfirmState({
+      isOpen: true,
+      type: 'danger',
+      title: 'Delete Project?',
+      message: `Are you sure you want to permanently delete "${item.title}"? This action cannot be undone.`,
+      confirmText: 'Delete',
+      action: async () => await performDelete(item.id)
+    });
+  };
 
+  // 4. The actual delete logic
+  const performDelete = async (id: string) => {
+    setIsUploading(true); // Reuse uploading state for loading indicator
     try {
       const { error } = await supabase
         .from('portfolio')
@@ -126,8 +177,12 @@ export default function AdminDashboard() {
       
       if (error) throw error;
       fetchItems();
+      setConfirmState(prev => ({ ...prev, isOpen: false }));
     } catch (error) {
       console.error('Error deleting item:', error);
+      alert('Failed to delete item.');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -137,8 +192,6 @@ export default function AdminDashboard() {
       setTitle(item.title);
       setDescription(item.description);
       setCategory(item.category);
-      // Initialize gallery with existing data
-      // Fallback to [image_url] if gallery is empty (legacy data)
       setGalleryUrls(item.gallery && item.gallery.length > 0 ? item.gallery : [item.image_url]);
     } else {
       setEditingItem(null);
@@ -166,6 +219,20 @@ export default function AdminDashboard() {
 
   return (
     <div className="container mx-auto px-4 py-8 bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-300">
+      
+      {/* Confirmation Modal Component */}
+      <ConfirmationModal 
+        isOpen={confirmState.isOpen}
+        onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmState.action}
+        title={confirmState.title}
+        message={confirmState.message}
+        type={confirmState.type}
+        confirmText={confirmState.confirmText}
+        cancelText={t.admin.cancel}
+        isLoading={isUploading}
+      />
+
       <div className="flex justify-between items-center mb-8 pt-20">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{t.admin.dashboardTitle}</h1>
         <button
@@ -222,7 +289,7 @@ export default function AdminDashboard() {
                       <Edit2 className="h-5 w-5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => handleDeleteClick(item)}
                       className="text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                     >
                       <Trash2 className="h-5 w-5" />
@@ -235,7 +302,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Main Edit/Create Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-700">
@@ -248,7 +315,7 @@ export default function AdminDashboard() {
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto">
+            <form onSubmit={handleSaveClick} className="p-6 space-y-6 overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{t.admin.projectTitle}</label>
@@ -361,26 +428,15 @@ export default function AdminDashboard() {
                   type="button"
                   onClick={closeModal}
                   className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                  disabled={loading}
                 >
                   {t.admin.cancel}
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2 shadow-sm"
                 >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                      <span>{isUploading ? t.admin.uploading : t.admin.saving}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      <span>{t.admin.save}</span>
-                    </>
-                  )}
+                  <Save className="h-4 w-4" />
+                  <span>{t.admin.save}</span>
                 </button>
               </div>
             </form>
