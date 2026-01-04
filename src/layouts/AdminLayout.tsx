@@ -28,13 +28,20 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   // GHOSTING FIX: If not authenticated, do not render the layout at all.
-  // This prevents the sidebar from "sticking" around during the redirect.
   if (!isAuthenticated) return null;
 
   const handleLogout = async () => {
     setIsLogoutModalOpen(false);
+    
+    // 1. Perform Auth Cleanup
     await signOut();
-    navigate('/login', { replace: true });
+    
+    // 2. HARD REDIRECT to Landing Page ('/')
+    // Using window.location.replace() instead of navigate() ensures:
+    // - The history stack is replaced (user cannot click "Back" to return to admin)
+    // - Memory cache is cleared
+    // - The app is fully re-initialized
+    window.location.replace('/');
   };
 
   const navItems = [
@@ -43,7 +50,7 @@ export default function AdminLayout() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800">
-      {/* Sidebar Header - REDESIGNED */}
+      {/* Sidebar Header */}
       <div className="p-6 border-b border-gray-100 dark:border-slate-800">
         <div className="flex items-center gap-3">
           <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2.5 rounded-xl shadow-lg shadow-blue-600/20">
@@ -133,12 +140,12 @@ export default function AdminLayout() {
         </button>
       </div>
 
-      {/* Desktop Sidebar (Persistent Sticky) */}
+      {/* Desktop Sidebar */}
       <aside className="hidden lg:block fixed top-0 left-0 bottom-0 w-72 z-40 shadow-xl shadow-slate-200/50 dark:shadow-none">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Drawer (Overlay) */}
+      {/* Mobile Drawer */}
       <AnimatePresence>
         {isSidebarOpen && (
           <>

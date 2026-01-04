@@ -68,24 +68,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // 2. Synchronous Logout Logic & Cleanup
+  // 2. Comprehensive Logout Logic
   const signOut = useCallback(async () => {
-    // Immediate state update to prevent UI ghosting
-    setState({
-      session: null,
-      user: null,
-      loading: false,
-      isAuthenticated: false,
-    });
-
     try {
-      // Clear Supabase session from local storage/cookies
-      await supabase.auth.signOut();
+      // A. Immediate State Reset (Optimistic UI update)
+      setState({
+        session: null,
+        user: null,
+        loading: false,
+        isAuthenticated: false,
+      });
+
+      // B. Supabase Sign Out (Clears server session & local storage tokens)
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // C. Extra Safety: Manually clear Supabase-specific keys from LocalStorage
+      // We iterate to find keys starting with 'sb-' (Supabase default) or specific project keys
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
       
-      // Optional: Clear any other app-specific storage if needed
-      // localStorage.removeItem('app-settings');
+      // Note: We intentionally do NOT clear 'theme' or 'language' preferences
+      
     } catch (error) {
       console.error('Error signing out:', error);
+      // Even if API fails, we enforce client-side logout state
+      setState({
+        session: null,
+        user: null,
+        loading: false,
+        isAuthenticated: false,
+      });
     }
   }, []);
 

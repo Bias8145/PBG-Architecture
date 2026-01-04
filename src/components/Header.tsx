@@ -57,10 +57,13 @@ export default function Header() {
   const handleLogout = async () => {
     // 1. Close menu immediately to prevent double clicks
     setMobileMenuOpen(false);
+    
     // 2. Perform sign out
     await signOut();
-    // 3. Redirect is handled by AuthContext/ProtectedRoutes, but we can force it here too
-    navigate('/login');
+    
+    // 3. HARD REDIRECT to Landing Page ('/')
+    // Ensures clean state and history
+    window.location.replace('/');
   };
 
   const navItems: NavItem[] = [
@@ -87,7 +90,7 @@ export default function Header() {
           )}
         >
           <div className="flex items-center justify-between">
-            {/* BRANDING REDESIGN: More Professional Look */}
+            {/* BRANDING */}
             <Link 
               to="/" 
               className="flex items-center gap-x-3 group"
@@ -130,7 +133,6 @@ export default function Header() {
                       : "text-slate-200 hover:text-white"
                   )}
                 >
-                  {/* Hover Background Effect */}
                   <span className={clsx(
                     "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
                     scrolled ? "bg-slate-100 dark:bg-slate-800" : "bg-white/10"
@@ -208,11 +210,10 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile Navigation Drawer - Z-INDEX FIX: Raised to z-[100] */}
+      {/* Mobile Navigation Drawer */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -221,7 +222,6 @@ export default function Header() {
               className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[90] md:hidden"
             />
             
-            {/* Drawer */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: -20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -230,7 +230,6 @@ export default function Header() {
               className="fixed inset-x-4 top-24 z-[100] md:hidden"
             >
               <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                {/* Menu Grid */}
                 <div className="p-4 grid grid-cols-4 gap-3">
                   {navItems.map((item) => (
                     <a
@@ -247,7 +246,6 @@ export default function Header() {
                   ))}
                 </div>
 
-                {/* Auth Actions Area */}
                 <div className="bg-slate-50 dark:bg-slate-950/50 p-4 border-t border-slate-100 dark:border-slate-800">
                   {session ? (
                     <div className="flex flex-col gap-3">
@@ -263,7 +261,6 @@ export default function Header() {
                         <ChevronRight className="h-4 w-4 opacity-50" />
                       </Link>
                       
-                      {/* LOGOUT FIX: Ensure button is clearly clickable and handles event properly */}
                       <button
                         onClick={handleLogout}
                         className="flex items-center justify-center gap-x-2 w-full py-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/20 rounded-2xl font-bold active:scale-95 transition-transform"
