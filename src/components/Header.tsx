@@ -7,7 +7,6 @@ import {
   Phone, 
   LayoutDashboard, 
   LogIn, 
-  LogOut, 
   Globe, 
   Sun, 
   Moon, 
@@ -30,12 +29,11 @@ interface NavItem {
 
 export default function Header() {
   const { language, setLanguage, t } = useLanguage();
-  const { session, signOut } = useAuth();
+  const { session } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -159,6 +157,7 @@ export default function Header() {
                 <span>{language.toUpperCase()}</span>
               </button>
 
+              {/* DESKTOP: Login/Dashboard Button */}
               {session ? (
                 <Link
                   to="/admin"
@@ -235,11 +234,13 @@ export default function Header() {
                 </div>
 
                 {/* 
-                  UPDATED: Only show Dashboard link if logged in.
-                  Removed Logout and Login buttons as requested.
+                  MOBILE AUTH SECTION
+                  Logic: 
+                  - If Logged In: Show "Dashboard" (Blue Button)
+                  - If Logged Out: Show "Login Admin" (Outline Button)
                 */}
-                {session && (
-                  <div className="bg-slate-50 dark:bg-slate-950/50 p-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="bg-slate-50 dark:bg-slate-950/50 p-4 border-t border-slate-100 dark:border-slate-800">
+                  {session ? (
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
@@ -251,8 +252,20 @@ export default function Header() {
                       </div>
                       <ChevronRight className="h-4 w-4 opacity-50" />
                     </Link>
-                  </div>
-                )}
+                  ) : (
+                    <Link
+                      to="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center justify-between w-full p-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <LogIn className="h-5 w-5 text-blue-600" />
+                        <span>{t.nav.login}</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 opacity-50" />
+                    </Link>
+                  )}
+                </div>
               </div>
             </motion.div>
           </>

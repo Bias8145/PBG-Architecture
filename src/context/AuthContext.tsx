@@ -79,23 +79,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: false,
       });
 
-      // B. Supabase Sign Out (Clears server session & local storage tokens)
-      const { error } = await supabase.auth.signOut();
+      // B. Supabase Sign Out
+      // We use 'global' scope to ensure it clears everything
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) throw error;
 
-      // C. Extra Safety: Manually clear Supabase-specific keys from LocalStorage
-      // We iterate to find keys starting with 'sb-' (Supabase default) or specific project keys
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key);
+      // C. Aggressive Local Storage Clearing
+      // Specifically target Supabase keys to prevent "Ghost Sessions"
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth'))) {
+          keysToRemove.push(key);
         }
-      });
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
       
-      // Note: We intentionally do NOT clear 'theme' or 'language' preferences
-      
+      // Also clear sessionStorage just in case
+      sessionStorage.clear();
+
     } catch (error) {
       console.error('Error signing out:', error);
-      // Even if API fails, we enforce client-side logout state
+      // Force state clear even on error
       setState({
         session: null,
         user: null,
